@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Helpdesk ML System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="hero">
+        <h1>SKANEM INTERLABEL AFRICA</h1>
+        <p class="subtitle">AI-powered ticket management with automatic classification and smart routing for enterprise IT support</p>
+        
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">AI</div>
+                <h3>ML Classification</h3>
+                <p>Automatic ticket categorization using advanced machine learning algorithms trained on historical data</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">→</div>
+                <h3>Smart Routing</h3>
+                <p>Intelligent assignment to qualified technicians based on expertise, workload, and availability</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Real-time Tracking</h3>
+                <p>Monitor ticket lifecycle from submission to resolution with comprehensive status updates</p>
+            </div>
+        </div>
+
+        <div class="cta-section">
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-large">Access System</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

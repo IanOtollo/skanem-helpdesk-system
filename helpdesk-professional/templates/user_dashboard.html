@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Helpdesk ML System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="dashboard-header">
+        <h2>Submit & Track Support Tickets</h2>
+        <p>Create new IT support requests and monitor their resolution status</p>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Submit Ticket Form -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Create New Ticket</h3>
+            </div>
+            <div class="card-body">
+                <form id="ticketForm">
+                    <div class="form-group">
+                        <label for="subject">Subject</label>
+                        <input type="text" id="subject" name="subject" required 
+                               placeholder="Brief description of the issue">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Detailed Description</label>
+                        <textarea id="description" name="description" rows="5" required
+                                  placeholder="Provide comprehensive information about the issue, including any error messages or steps to reproduce..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="priority">Priority Level</label>
+                        <select id="priority" name="priority">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Submit Ticket</button>
+                </form>
+
+                <div id="submitMessage" class="alert" style="display: none; margin-top: 20px;"></div>
+            </div>
+        </div>
+
+        <!-- My Tickets -->
+        <div class="card">
+            <div class="card-header">
+                <h3>My Support Tickets</h3>
+            </div>
+            <div class="card-body">
+                {% if tickets %}
+                <div class="tickets-list">
+                    {% for ticket in tickets %}
+                    <div class="ticket-item">
+                        <div class="ticket-header-row">
+                            <span class="ticket-number">{{ ticket.ticket_number }}</span>
+                            <span class="badge badge-{{ ticket.status|lower|replace(' ', '-') }}">
+                                {{ ticket.status }}
+                            </span>
+                        </div>
+                        <h4>{{ ticket.subject }}</h4>
+                        <p class="ticket-description">{{ ticket.description[:150] }}{% if ticket.description|length > 150 %}...{% endif %}</p>
+                        <div class="ticket-meta">
+                            <span class="badge badge-category">{{ ticket.category }}</span>
+                            <span class="badge badge-priority-{{ ticket.priority|lower }}">{{ ticket.priority }}</span>
+                            {% if ticket.technician_name %}
+                            <span class="badge">Assigned: {{ ticket.technician_name }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="ticket-footer">
+                            <small>Created: {{ ticket.created_at_formatted or ticket.created_at }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="no-tickets">No tickets submitted yet. Create your first support ticket above.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('ticketForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const messageDiv = document.getElementById('submitMessage');
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Processing...';
+    
+    const formData = {
+        subject: document.getElementById('subject').value,
+        description: document.getElementById('description').value,
+        priority: document.getElementById('priority').value
+    };
+    
+    try {
+        const response = await fetch('/api/tickets/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            messageDiv.className = 'alert alert-success';
+            messageDiv.innerHTML = `
+                <strong>Success!</strong><br>
+                Ticket ${data.ticket_number} created successfully<br>
+                <strong>Category:</strong> ${data.category} (${data.confidence} confidence)<br>
+                <strong>Assigned to:</strong> ${data.assigned_to}
+            `;
+            messageDiv.style.display = 'block';
+            
+            e.target.reset();
+            
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            messageDiv.className = 'alert alert-error';
+            messageDiv.textContent = data.error || 'Error creating ticket';
+            messageDiv.style.display = 'block';
+        }
+    } catch (error) {
+        messageDiv.className = 'alert alert-error';
+        messageDiv.textContent = 'Network error. Please try again.';
+        messageDiv.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Ticket';
+    }
+});
+</script>
+{% endblock %}

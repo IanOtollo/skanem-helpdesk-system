@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Helpdesk ML System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="dashboard-header">
+        <h1>Administrator Dashboard</h1>
+        <p>System Overview & Manual Assignment</p>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+        <div class="stat-card stat-card-warning">
+            <div class="stat-number">{{ stats.flagged_count or 0 }}</div>
+            <div class="stat-label">NEEDS MANUAL REVIEW</div>
+            <div style="font-size: 0.75rem; margin-top: var(--space-1); opacity: 0.8;">Confidence < {{ confidence_threshold }}%</div>
+        </div>
+        <div class="stat-card stat-card-primary">
+            <div class="stat-number">{{ stats.total_tickets or 0 }}</div>
+            <div class="stat-label">TOTAL TICKETS</div>
+        </div>
+        <div class="stat-card stat-card-info">
+            <div class="stat-number">{{ "%.1f"|format(stats.avg_confidence or 0) }}%</div>
+            <div class="stat-label">AVG ML CONFIDENCE</div>
+        </div>
+        <div class="stat-card stat-card-success">
+            <div class="stat-number">{{ stats.resolved or 0 }}</div>
+            <div class="stat-label">RESOLVED</div>
+        </div>
+    </div>
+
+    <!-- MANUAL ASSIGNMENT SECTION -->
+    {% if flagged_tickets %}
+    <div class="section-card" style="border-left: 4px solid #EF4444; background: #FEF2F2; margin-top: 2rem;">
+        <h2 style="color: #991B1B; margin-bottom: 0.5rem;">⚠️ Tickets Requiring Manual Assignment</h2>
+        <p style="color: #7F1D1D; margin-bottom: 1.5rem;">
+            <strong>{{ flagged_tickets|length }} tickets</strong> have ML confidence below {{ confidence_threshold }}%. Review and assign manually.
+        </p>
+        
+        {% for ticket in flagged_tickets %}
+        <div style="background: white; border: 1px solid #E5E7EB; border-left: 3px solid #EF4444; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #E5E7EB;">
+                <div>
+                    <span style="font-size: 1.25rem; font-weight: 700; color: #1E40AF; margin-right: 0.75rem;">{{ ticket.ticket_number }}</span>
+                    <span class="badge badge-priority-{{ ticket.priority.lower() }}">{{ ticket.priority }}</span>
+                    {% if ticket.category %}
+                    <span class="badge badge-category">{{ ticket.category }}</span>
+                    {% endif %}
+                </div>
+                <div style="background: #FEE2E2; color: #991B1B; padding: 0.5rem 1rem; border-radius: 0.375rem; text-align: center;">
+                    <div style="font-size: 1.25rem; font-weight: 700;">{{ "%.1f"|format(ticket.confidence_score or 0) }}%</div>
+                    <div style="font-size: 0.75rem;">ML Confidence</div>
+                </div>
+            </div>
+            
+            <h3 style="margin-bottom: 0.5rem; color: #1E40AF;">{{ ticket.subject }}</h3>
+            <p style="color: #6B7280; margin-bottom: 1rem;">{{ ticket.description[:200] }}...</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; padding: 1rem; background: #F9FAFB; border-radius: 0.375rem; margin-bottom: 1rem; font-size: 0.9rem;">
+                <div><strong>Submitted by:</strong> {{ ticket.user_name }}</div>
+                <div><strong>Email:</strong> {{ ticket.user_email }}</div>
+                <div><strong>Time:</strong> {{ ticket.submitted_at_formatted }}</div>
+            </div>
+            
+            <div style="background: #EFF6FF; padding: 1rem; border-radius: 0.375rem; border: 1px solid #BFDBFE;">
+                <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Assign to Technician:</label>
+                <div style="display: flex; gap: 0.75rem;">
+                    <select id="tech-{{ ticket.id }}" style="flex: 1; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.375rem; background: white;">
+                        <option value="">-- Select Technician --</option>
+                        {% for tech in technicians %}
+                        <option value="{{ tech.id }}" {% if tech.skills and ticket.category and ticket.category in tech.skills %}style="font-weight: 600; background: #DBEAFE;"{% endif %}>
+                            {{ tech.name }} - {{ tech.skills }} ({{ tech.current_workload }}/{{ tech.max_workload }})
+                            {% if tech.skills and ticket.category and ticket.category in tech.skills %}⭐{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button onclick="assignTicket({{ ticket.id }})" class="btn btn-primary">Assign</button>
+                </div>
+                <p style="margin-top: 0.5rem; font-size: 0.85rem; color: #6B7280;">💡 Recommended technicians (⭐) have matching skills</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="section-card" style="border-left: 4px solid #10B981; background: #F0FDF4; margin-top: 2rem; text-align: center; padding: 3rem;">
+        <div style="font-size: 3rem;">✅</div>
+        <h3 style="color: #065F46; margin: 1rem 0 0.5rem 0;">No Manual Review Required</h3>
+        <p style="color: #047857;">All tickets have been automatically assigned based on ML confidence.</p>
+    </div>
+    {% endif %}
+
+    <!-- Category Distribution -->
+    <div class="section-card" style="margin-top: 2rem;">
+        <h2>Category Distribution</h2>
+        <div class="category-bars">
+            {% if category_dist %}
+                {% set max_count = category_dist|map(attribute='count')|max %}
+                {% for cat in category_dist %}
+                <div class="category-bar-item">
+                    <div class="category-bar-label">
+                        <span>{{ cat.category }}</span>
+                        <span>{{ cat.count }} tickets</span>
+                    </div>
+                    <div class="category-bar-bg">
+                        <div class="category-bar-fill" style="width: {{ (cat.count / max_count * 100)|round }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ML Model Info -->
+    {% if model_info %}
+    <div class="section-card" style="margin-top: 2rem;">
+        <h2>ML Model Information</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div style="padding: 1rem; background: #F9FAFB; border-radius: 0.375rem;">
+                <div style="font-size: 0.85rem; color: #6B7280; margin-bottom: 0.25rem;">VERSION</div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: #1E40AF;">{{ model_info.model_version }}</div>
+            </div>
+            <div style="padding: 1rem; background: #F9FAFB; border-radius: 0.375rem;">
+                <div style="font-size: 0.85rem; color: #6B7280; margin-bottom: 0.25rem;">ACCURACY</div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: #10B981;">{{ "%.2f"|format(model_info.accuracy * 100) }}%</div>
+            </div>
+            <div style="padding: 1rem; background: #F9FAFB; border-radius: 0.375rem;">
+                <div style="font-size: 0.85rem; color: #6B7280; margin-bottom: 0.25rem;">TRAINED</div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: #1E40AF;">{{ model_info.training_date[:10] }}</div>
+            </div>
+            <div style="padding: 1rem; background: #F9FAFB; border-radius: 0.375rem;">
+                <div style="font-size: 0.85rem; color: #6B7280; margin-bottom: 0.25rem;">STATUS</div>
+                <div style="font-size: 1.25rem; font-weight: 700;"><span class="badge badge-success">Active</span></div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function assignTicket(ticketId) {
+    const select = document.getElementById(`tech-${ticketId}`);
+    const technicianId = select.value;
+    
+    if (!technicianId) {
+        alert('Please select a technician');
+        return;
+    }
+    
+    const reason = prompt('Reason for manual assignment:') || 'Low ML confidence - manual review';
+    
+    try {
+        const response = await fetch('/api/admin/assign-ticket', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ticket_id: ticketId,
+                technician_id: parseInt(technicianId),
+                reason: reason
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('✅ Ticket assigned successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Assignment failed'));
+        }
+    } catch (error) {
+        alert('Network error');
+    }
+}
+</script>
+{% endblock %}

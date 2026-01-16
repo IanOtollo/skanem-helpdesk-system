@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Helpdesk ML System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="dashboard-header">
+        <h1>Administrator Dashboard</h1>
+        <p class="subtitle">System Overview & Manual Review</p>
+    </div>
+
+    <!-- System Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card stat-primary">
+            <div class="stat-number">{{ stats.total }}</div>
+            <div class="stat-label">TOTAL TICKETS</div>
+        </div>
+        <div class="stat-card stat-warning">
+            <div class="stat-number">{{ stats.open }}</div>
+            <div class="stat-label">OPEN TICKETS</div>
+        </div>
+        <div class="stat-card stat-success">
+            <div class="stat-number">{{ stats.resolved }}</div>
+            <div class="stat-label">RESOLVED</div>
+        </div>
+        <div class="stat-card stat-error">
+            <div class="stat-number">{{ stats.flagged }}</div>
+            <div class="stat-label">⚠️  NEEDS REVIEW</div>
+        </div>
+    </div>
+
+    <!-- CRITICAL: Flagged Tickets Section -->
+    {% if flagged_tickets %}
+    <div class="section-card alert-section">
+        <div class="section-header">
+            <h2>⚠️ Tickets Requiring Manual Review</h2>
+            <span class="badge badge-error">{{ flagged_tickets|length }} tickets below 60% confidence</span>
+        </div>
+        
+        <div class="flagged-tickets-grid">
+            {% for ticket in flagged_tickets %}
+            <div class="flagged-ticket-card">
+                <div class="ticket-header">
+                    <div>
+                        <h3>{{ ticket.ticket_number }}</h3>
+                        <p class="ticket-subject">{{ ticket.subject }}</p>
+                    </div>
+                    <span class="badge badge-priority-{{ ticket.priority.lower() }}">{{ ticket.priority }}</span>
+                </div>
+                
+                <div class="ticket-body">
+                    <p class="ticket-description">{{ ticket.description[:150] }}...</p>
+                    
+                    <div class="ticket-meta">
+                        <div class="meta-item">
+                            <strong>Submitted by:</strong> {{ ticket.user_name }} ({{ ticket.department }})
+                        </div>
+                        <div class="meta-item">
+                            <strong>ML Category:</strong> {{ ticket.category or 'Unknown' }}
+                        </div>
+                        <div class="meta-item confidence-warning">
+                            <strong>Confidence:</strong> {{ ticket.confidence_score }}%
+                            <span class="warning-badge">Below 60% threshold</span>
+                        </div>
+                        <div class="meta-item">
+                            <strong>Submitted:</strong> {{ ticket.created_at_formatted }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ticket-actions">
+                    <select class="tech-select" id="tech-{{ ticket.id }}">
+                        <option value="">Select Technician...</option>
+                        {% for tech in technicians %}
+                        <option value="{{ tech.id }}">
+                            {{ tech.name }} - {{ tech.skills }} ({{ tech.current_workload }}/{{ tech.max_workload }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-primary" onclick="manualAssign({{ ticket.id }})">
+                        Assign Manually
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Category Distribution -->
+    <div class="section-card">
+        <h2>Ticket Distribution by Category</h2>
+        <div class="category-stats">
+            {% for cat in categories %}
+            <div class="category-bar">
+                <div class="category-label">
+                    <span class="category-name">{{ cat.category }}</span>
+                    <span class="category-count">{{ cat.count }} tickets</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ (cat.count / stats.total * 100)|int }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ML Model Information -->
+    {% if model_info %}
+    <div class="section-card">
+        <h2>ML Model Information</h2>
+        <div class="model-info-grid">
+            <div class="info-item">
+                <strong>Version:</strong> {{ model_info.model_version }}
+            </div>
+            <div class="info-item">
+                <strong>Accuracy:</strong> {{ (model_info.accuracy * 100)|round(2) }}%
+            </div>
+            <div class="info-item">
+                <strong>Trained:</strong> {{ model_info.training_date[:10] }}
+            </div>
+            <div class="info-item">
+                <strong>Status:</strong> 
+                <span class="badge badge-success">Active</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- All Tickets Table -->
+    <div class="section-card">
+        <h2>Recent Tickets</h2>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>TICKET #</th>
+                        <th>SUBJECT</th>
+                        <th>USER</th>
+                        <th>CATEGORY</th>
+                        <th>PRIORITY</th>
+                        <th>STATUS</th>
+                        <th>TECHNICIAN</th>
+                        <th>CONFIDENCE</th>
+                        <th>SUBMITTED</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in all_tickets %}
+                    <tr class="{% if ticket.flagged_for_manual_review %}flagged-row{% endif %}">
+                        <td><strong>{{ ticket.ticket_number }}</strong></td>
+                        <td>{{ ticket.subject }}</td>
+                        <td>{{ ticket.user_name }}</td>
+                        <td>
+                            <span class="badge badge-category">{{ ticket.category or 'N/A' }}</span>
+                        </td>
+                        <td>
+                            <span class="badge badge-priority-{{ ticket.priority.lower() }}">{{ ticket.priority }}</span>
+                        </td>
+                        <td>
+                            <span class="badge badge-status-{{ ticket.status.lower().replace(' ', '-') }}">
+                                {{ ticket.status }}
+                            </span>
+                        </td>
+                        <td>{{ ticket.technician_name or '-' }}</td>
+                        <td>
+                            {% if ticket.confidence_score %}
+                                <span class="{% if ticket.confidence_score < 60 %}confidence-low{% else %}confidence-good{% endif %}">
+                                    {{ ticket.confidence_score }}%
+                                </span>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ ticket.created_at_formatted }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Socket.IO for Real-time Notifications -->
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+<script>
+// Initialize Socket.IO
+const socket = io();
+
+// Manual assignment function
+async function manualAssign(ticketId) {
+    const techSelect = document.getElementById(`tech-${ticketId}`);
+    const technicianId = techSelect.value;
+    
+    if (!technicianId) {
+        alert('Please select a technician first');
+        return;
+    }
+    
+    const reason = prompt('Reason for manual assignment (optional):') || 'Low confidence score - manual review';
+    
+    try {
+        const response = await fetch(`/api/tickets/${ticketId}/manual-assign`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                technician_id: technicianId,
+                reason: reason
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert(`✓ Ticket assigned to ${data.technician_name}`);
+            location.reload();
+        } else {
+            alert(`Error: ${data.error}`);
+        }
+    } catch (error) {
+        alert('Network error. Please try again.');
+        console.error(error);
+    }
+}
+
+// Listen for new flagged tickets
+socket.on('ticket_flagged', function(data) {
+    console.log('New ticket flagged for review:', data);
+    // Could show notification or update count
+});
+</script>
+
+<style>
+/* Alert Section Styling */
+.alert-section {
+    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+    border: 2px solid #F59E0B;
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+
+.alert-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-4);
+}
+
+.alert-section h2 {
+    color: #92400E;
+    margin: 0;
+}
+
+/* Flagged Tickets Grid */
+.flagged-tickets-grid {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.flagged-ticket-card {
+    background: white;
+    border: 2px solid #F59E0B;
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+}
+
+.flagged-ticket-card .ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: var(--space-3);
+}
+
+.flagged-ticket-card h3 {
+    color: var(--primary-700);
+    margin: 0 0 var(--space-1) 0;
+    font-size: 1.125rem;
+}
+
+.flagged-ticket-card .ticket-subject {
+    color: var(--text-primary);
+    font-weight: 600;
+    margin: 0;
+}
+
+.flagged-ticket-card .ticket-description {
+    color: var(--text-secondary);
+    margin: var(--space-3) 0;
+}
+
+.ticket-meta {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2);
+    margin: var(--space-3) 0;
+    padding: var(--space-3);
+    background: var(--gray-50);
+    border-radius: var(--radius-sm);
+}
+
+.meta-item {
+    font-size: 0.875rem;
+}
+
+.meta-item strong {
+    color: var(--text-secondary);
+    display: block;
+    margin-bottom: var(--space-1);
+}
+
+.confidence-warning {
+    grid-column: 1 / -1;
+    color: #DC2626;
+    font-weight: 600;
+}
+
+.warning-badge {
+    display: inline-block;
+    background: #FEE2E2;
+    color: #991B1B;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    margin-left: var(--space-2);
+}
+
+.ticket-actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--gray-200);
+}
+
+.tech-select {
+    flex: 1;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+}
+
+/* Model Info Grid */
+.model-info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+}
+
+.info-item {
+    padding: var(--space-3);
+    background: var(--gray-50);
+    border-radius: var(--radius-sm);
+}
+
+.info-item strong {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-1);
+}
+
+/* Confidence Indicators */
+.confidence-low {
+    color: #DC2626;
+    font-weight: 600;
+}
+
+.confidence-good {
+    color: #059669;
+    font-weight: 600;
+}
+
+/* Flagged Row Highlight */
+.flagged-row {
+    background: #FEF3C7 !important;
+}
+
+.flagged-row:hover {
+    background: #FDE68A !important;
+}
+
+/* Status Badge Variants */
+.badge-status-submitted {
+    background: #E5E7EB;
+    color: #374151;
+}
+
+.badge-status-classified {
+    background: #DBEAFE;
+    color: #1E40AF;
+}
+
+.badge-status-assigned {
+    background: #E0E7FF;
+    color: #4338CA;
+}
+
+.badge-status-in-progress {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.badge-status-resolved {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.badge-status-closed {
+    background: #F3F4F6;
+    color: #6B7280;
+}
+</style>
+{% endblock %}

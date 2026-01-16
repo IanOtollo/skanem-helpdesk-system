@@ -1,0 +1,209 @@
+FIX: "INVALID CREDENTIALS" ERROR
+================================================================================
+
+PROBLEM: Mike (technician) and Admin login showing "Invalid credentials"
+
+ROOT CAUSE: Old database file with incorrect/corrupted credentials
+
+SOLUTION: Reset the database (30 seconds)
+
+================================================================================
+
+QUICK FIX - 3 STEPS:
+================================================================================
+
+STEP 1: Run the reset script
+────────────────────────────────────────────────────────────────────────────
+cd /path/to/helpdesk-professional
+python reset_database.py
+
+You'll see:
+✓ DATABASE RESET COMPLETE!
+📋 LOGIN CREDENTIALS listed
+
+STEP 2: Run the app
+────────────────────────────────────────────────────────────────────────────
+python app_demo.py
+
+STEP 3: Login with correct role selection
+────────────────────────────────────────────────────────────────────────────
+Go to: http://localhost:5000/login
+
+FOR TECHNICIAN:
+1. Select "Technician" in dropdown
+2. Email: mike.tech@skanem.com
+3. Password: tech123
+4. Click Sign In
+
+FOR ADMIN:
+1. Select "Administrator" in dropdown
+2. Email: admin@skanem.com
+3. Password: admin123
+4. Click Sign In
+
+IMPORTANT: Make sure you select the CORRECT ROLE in the dropdown!
+
+================================================================================
+
+COMPLETE LOGIN CREDENTIALS:
+================================================================================
+
+👤 END USER
+────────────────────────────────────────────────────────────────────────────
+Role: User (select from dropdown)
+Email: john.doe@skanem.com
+Password: password123
+
+🔧 TECHNICIAN
+────────────────────────────────────────────────────────────────────────────
+Role: Technician (select from dropdown)
+Email: mike.tech@skanem.com
+Password: tech123
+
+👑 ADMINISTRATOR
+────────────────────────────────────────────────────────────────────────────
+Role: Administrator (select from dropdown)
+Email: admin@skanem.com
+Password: admin123
+
+================================================================================
+
+COMMON MISTAKES:
+================================================================================
+
+❌ MISTAKE 1: Wrong role selected
+   - You select "User" but try to login with technician credentials
+   - FIX: Select "Technician" in the dropdown
+
+❌ MISTAKE 2: Old database file
+   - Previous database has different credentials
+   - FIX: Run reset_database.py
+
+❌ MISTAKE 3: Typo in email/password
+   - Capital letters where there shouldn't be
+   - Extra spaces
+   - FIX: Copy-paste from this file
+
+❌ MISTAKE 4: Wrong email domain
+   - Using @gmail.com instead of @skanem.com
+   - FIX: All emails end with @skanem.com
+
+================================================================================
+
+WHAT THE RESET SCRIPT DOES:
+================================================================================
+
+1. Deletes old helpdesk.db file (if exists)
+2. Creates fresh database with correct schema
+3. Inserts demo users with these exact credentials:
+   - john.doe@skanem.com / password123 (User)
+   - mike.tech@skanem.com / tech123 (Technician)
+   - admin@skanem.com / admin123 (Admin)
+4. Creates 3 technicians (Mike, Sarah, James)
+5. Sets up proper table relationships
+
+================================================================================
+
+MANUAL RESET (IF SCRIPT FAILS):
+================================================================================
+
+If reset_database.py doesn't work, do this manually:
+
+1. STOP the app (Ctrl+C)
+
+2. DELETE old database:
+   rm helpdesk.db   (Mac/Linux)
+   del helpdesk.db  (Windows)
+
+3. RUN app again:
+   python app_demo.py
+   
+   The app will automatically create a fresh database with correct credentials
+
+4. LOGIN with credentials from above
+
+================================================================================
+
+VERIFICATION - AFTER RESET:
+================================================================================
+
+Test all three accounts:
+
+TEST 1: User Login
+────────────────────────────────────────────────────────────────────────────
+1. Go to http://localhost:5000/login
+2. Role: User
+3. Email: john.doe@skanem.com
+4. Password: password123
+5. Should see: User Dashboard
+
+TEST 2: Technician Login
+────────────────────────────────────────────────────────────────────────────
+1. Logout (top-right)
+2. Go to login page
+3. Role: Technician
+4. Email: mike.tech@skanem.com
+5. Password: tech123
+6. Should see: Technician Dashboard
+
+TEST 3: Admin Login
+────────────────────────────────────────────────────────────────────────────
+1. Logout
+2. Go to login page
+3. Role: Administrator
+4. Email: admin@skanem.com
+5. Password: admin123
+6. Should see: Admin Dashboard
+
+ALL THREE SHOULD WORK! ✅
+
+================================================================================
+
+STILL NOT WORKING?
+================================================================================
+
+If after reset it still doesn't work:
+
+CHECK 1: Role dropdown
+────────────────────────────────────────────────────────────────────────────
+- Make sure you're selecting the CORRECT role
+- "Technician" for mike.tech@skanem.com
+- "Administrator" for admin@skanem.com
+
+CHECK 2: Browser cache
+────────────────────────────────────────────────────────────────────────────
+- Clear browser cache (Ctrl+Shift+Delete)
+- Or use Incognito/Private mode
+
+CHECK 3: Port conflict
+────────────────────────────────────────────────────────────────────────────
+- Make sure only ONE instance of app is running
+- Kill old processes: lsof -ti:5000 | xargs kill -9
+
+CHECK 4: Database file location
+────────────────────────────────────────────────────────────────────────────
+- Make sure you're in the correct directory
+- The helpdesk.db file should be in the same folder as app_demo.py
+
+CHECK 5: Copy-paste credentials
+────────────────────────────────────────────────────────────────────────────
+- Don't type manually
+- Copy from this file to avoid typos
+
+================================================================================
+
+SUMMARY:
+================================================================================
+
+Problem: Invalid credentials for technician/admin
+Solution: Run reset_database.py
+Time: 30 seconds
+Result: All logins working ✅
+
+Commands:
+  python reset_database.py
+  python app_demo.py
+  
+Then login with correct role + credentials.
+
+================================================================================

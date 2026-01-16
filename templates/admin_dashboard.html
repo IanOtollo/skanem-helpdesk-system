@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Helpdesk ML System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="dashboard-header">
+        <h2>System Administration</h2>
+        <p>Monitor system performance, analytics, and ticket management</p>
+    </div>
+
+    <!-- Overall Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.total_tickets or 0 }}</div>
+            <div class="stat-label">Total Tickets</div>
+        </div>
+        <div class="stat-card stat-warning">
+            <div class="stat-value">{{ stats.open_tickets or 0 }}</div>
+            <div class="stat-label">Open</div>
+        </div>
+        <div class="stat-card stat-info">
+            <div class="stat-value">{{ stats.in_progress_tickets or 0 }}</div>
+            <div class="stat-label">In Progress</div>
+        </div>
+        <div class="stat-card stat-success">
+            <div class="stat-value">{{ stats.resolved_tickets or 0 }}</div>
+            <div class="stat-label">Resolved</div>
+        </div>
+    </div>
+
+    <!-- Category Distribution -->
+    <div class="card mb-6">
+        <div class="card-header">
+            <h3>Category Distribution</h3>
+        </div>
+        <div class="card-body">
+            <div class="category-stats">
+                {% for cat in stats.categories %}
+                <div class="category-stat-item">
+                    <span class="category-name">{{ cat.category }}</span>
+                    <div class="category-bar">
+                        <div class="category-bar-fill" style="width: {{ (cat.count / stats.total_tickets * 100) if stats.total_tickets > 0 else 0 }}%"></div>
+                    </div>
+                    <span class="category-count">{{ cat.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Tickets -->
+    <div class="card mb-6">
+        <div class="card-header">
+            <h3>Recent Activity</h3>
+        </div>
+        <div class="card-body">
+            {% if tickets %}
+            <div class="table-responsive">
+                <table class="tickets-table">
+                    <thead>
+                        <tr>
+                            <th>Ticket #</th>
+                            <th>Subject</th>
+                            <th>Category</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>User</th>
+                            <th>Technician</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in tickets %}
+                        <tr>
+                            <td><strong>{{ ticket.ticket_number }}</strong></td>
+                            <td>{{ ticket.subject[:50] }}{% if ticket.subject|length > 50 %}...{% endif %}</td>
+                            <td><span class="badge badge-category">{{ ticket.category }}</span></td>
+                            <td><span class="badge badge-priority-{{ ticket.priority|lower }}">{{ ticket.priority }}</span></td>
+                            <td><span class="badge badge-{{ ticket.status|lower|replace(' ', '-') }}">{{ ticket.status }}</span></td>
+                            <td>{{ ticket.user_name }}</td>
+                            <td>{{ ticket.technician_name or 'Unassigned' }}</td>
+                            <td>{{ ticket.created_at_formatted or ticket.created_at }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="no-tickets">No tickets in the system yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ML Model Info -->
+    <div class="card">
+        <div class="card-header">
+            <h3>ML Model Performance</h3>
+        </div>
+        <div class="card-body">
+            <div class="ml-info">
+                <p><strong>Algorithm:</strong> Logistic Regression with TF-IDF Feature Extraction</p>
+                <p><strong>Classification Accuracy:</strong> 67% on test dataset</p>
+                <p><strong>Supported Categories:</strong> Hardware, Software, Network, Database</p>
+                <p><strong>Feature Dimensions:</strong> 500 TF-IDF features</p>
+                <p><strong>Status:</strong> <span class="badge badge-success">Active & Operational</span></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

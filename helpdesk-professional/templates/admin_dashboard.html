@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Helpdesk ML System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="dashboard-header">
+        <h1>Administrator Dashboard</h1>
+        <p>System Overview & Manual Review</p>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+        <div class="stat-card stat-card-primary">
+            <div class="stat-number">{{ total_tickets }}</div>
+            <div class="stat-label">TOTAL TICKETS</div>
+        </div>
+        <div class="stat-card stat-card-warning">
+            <div class="stat-number">{{ active_tickets }}</div>
+            <div class="stat-label">ACTIVE TICKETS</div>
+        </div>
+        <div class="stat-card stat-card-success">
+            <div class="stat-number">{{ resolved_tickets }}</div>
+            <div class="stat-label">RESOLVED TICKETS</div>
+        </div>
+        <div class="stat-card stat-card-error">
+            <div class="stat-number">{{ flagged_tickets }}</div>
+            <div class="stat-label">NEEDS MANUAL REVIEW</div>
+        </div>
+    </div>
+
+    <!-- CRITICAL: MANUAL REVIEW SECTION -->
+    {% if flagged_tickets_list %}
+    <div class="section-card" style="border-left: 4px solid var(--error-500); background: #FEF2F2;">
+        <h2 style="color: var(--error-700); margin-bottom: var(--space-4);">
+            ⚠️ Manual Review Required ({{ flagged_tickets }} Tickets)
+        </h2>
+        <p style="color: var(--error-600); margin-bottom: var(--space-6);">
+            These tickets have ML confidence scores below 60% and require manual assignment to a technician.
+        </p>
+        
+        {% for ticket in flagged_tickets_list %}
+        <div class="ticket-card" style="border-left: 3px solid var(--error-500); background: white; margin-bottom: var(--space-4);">
+            <div class="ticket-header">
+                <div class="ticket-number-large">{{ ticket.ticket_number }}</div>
+                <div class="ticket-badges">
+                    <span class="badge badge-priority-{{ ticket.priority|lower }}">{{ ticket.priority }}</span>
+                    <span class="badge badge-category">{{ ticket.category or 'Unclassified' }}</span>
+                    <span class="badge" style="background: var(--error-100); color: var(--error-700);">
+                        Confidence: {{ ticket.confidence_score }}%
+                    </span>
+                </div>
+            </div>
+            
+            <h3>{{ ticket.subject }}</h3>
+            <p class="ticket-description">{{ ticket.description[:150] }}{% if ticket.description|length > 150 %}...{% endif %}</p>
+            
+            <div class="ticket-meta">
+                <span><strong>Submitted by:</strong> {{ ticket.user_name }} ({{ ticket.user_department }})</span>
+                <span><strong>Time:</strong> {{ ticket.submitted_at_formatted }}</span>
+            </div>
+            
+            <!-- Manual Assignment Form -->
+            <div class="manual-assign-section" style="margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--border);">
+                <label style="font-weight: 600; margin-bottom: var(--space-2); display: block;">Assign to Technician:</label>
+                <div style="display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap;">
+                    <select class="form-select" id="tech-select-{{ ticket.id }}" style="flex: 1; min-width: 250px;">
+                        <option value="">Select technician...</option>
+                        {% for tech in technicians %}
+                        <option value="{{ tech.id }}" data-skills="{{ tech.skills }}">
+                            {{ tech.name }} - {{ tech.skills }} ({{ tech.current_workload }}/{{ tech.max_workload }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-primary" onclick="manualAssign({{ ticket.id }})">
+                        Assign Manually
+                    </button>
+                </div>
+                <small style="color: var(--text-secondary); margin-top: var(--space-2); display: block;">
+                    💡 Recommended: Choose technician with "{{ ticket.category }}" skills
+                </small>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="section-card" style="border-left: 4px solid var(--success-500); background: var(--success-50);">
+        <h2 style="color: var(--success-700);">✓ No Tickets Require Manual Review</h2>
+        <p style="color: var(--success-600);">All tickets have been auto-assigned successfully with confidence ≥ 60%</p>
+    </div>
+    {% endif %}
+
+    <!-- ML Model Performance -->
+    {% if active_model %}
+    <div class="section-card">
+        <h2>ML Model Performance</h2>
+        <div class="model-stats">
+            <div class="model-stat">
+                <span class="label">Model Version:</span>
+                <span class="value">{{ active_model.model_version }}</span>
+            </div>
+            <div class="model-stat">
+                <span class="label">Algorithm:</span>
+                <span class="value">{{ active_model.model_type }}</span>
+            </div>
+            <div class="model-stat">
+                <span class="label">Accuracy:</span>
+                <span class="value">{{ (active_model.accuracy * 100)|round(2) }}%</span>
+            </div>
+            <div class="model-stat">
+                <span class="label">Training Date:</span>
+                <span class="value">{{ active_model.training_date[:10] }}</span>
+            </div>
+            <div class="model-stat">
+                <span class="label">Dataset Size:</span>
+                <span class="value">{{ active_model.dataset_size }} tickets</span>
+            </div>
+            <div class="model-stat">
+                <span class="label">Confidence Threshold:</span>
+                <span class="value" style="color: var(--error-600);">60%</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Category Distribution -->
+    <div class="section-card">
+        <h2>Category Distribution</h2>
+        <div class="category-bars">
+            {% set max_count = categories[0].count if categories else 1 %}
+            {% for cat in categories %}
+            <div class="category-bar-item">
+                <div class="category-label">{{ cat.category }}</div>
+                <div class="category-bar-container">
+                    <div class="category-bar" style="width: {{ (cat.count / max_count * 100)|round(1) }}%;">
+                        <span>{{ cat.count }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="section-card">
+        <h2>Recent Tickets</h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>TICKET #</th>
+                        <th>SUBJECT</th>
+                        <th>USER</th>
+                        <th>STATUS</th>
+                        <th>PRIORITY</th>
+                        <th>SUBMITTED</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in recent_tickets %}
+                    <tr>
+                        <td><strong>{{ ticket.ticket_number }}</strong></td>
+                        <td>{{ ticket.subject[:50] }}...</td>
+                        <td>{{ ticket.user_name }}</td>
+                        <td><span class="badge badge-status-{{ ticket.status|lower|replace(' ', '-') }}">{{ ticket.status }}</span></td>
+                        <td><span class="badge badge-priority-{{ ticket.priority|lower }}">{{ ticket.priority }}</span></td>
+                        <td>{{ ticket.submitted_at_formatted }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function manualAssign(ticketId) {
+    const selectElement = document.getElementById(`tech-select-${ticketId}`);
+    const technicianId = selectElement.value;
+    
+    if (!technicianId) {
+        alert('Please select a technician');
+        return;
+    }
+    
+    const technicianName = selectElement.options[selectElement.selectedIndex].text.split(' - ')[0];
+    
+    if (!confirm(`Assign this ticket to ${technicianName}?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/admin/assign-ticket', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ticket_id: ticketId,
+                technician_id: parseInt(technicianId),
+                reason: 'Manual assignment due to low ML confidence score'
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Network error. Please try again.');
+    }
+}
+</script>
+
+<style>
+.manual-assign-section {
+    animation: highlightPulse 2s ease-in-out infinite;
+}
+
+@keyframes highlightPulse {
+    0%, 100% { background: transparent; }
+    50% { background: var(--error-50); }
+}
+
+.model-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+}
+
+.model-stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.model-stat .label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.model-stat .value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.form-select {
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 0.9375rem;
+    background: white;
+    cursor: pointer;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px var(--primary-100);
+}
+</style>
+{% endblock %}

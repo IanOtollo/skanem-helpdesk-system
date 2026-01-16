@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Technician Dashboard - Helpdesk ML System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="dashboard-header">
+        <h2>Technician Workbench</h2>
+        <p>Manage assigned tickets and update resolution status</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.total or 0 }}</div>
+            <div class="stat-label">Total Assigned</div>
+        </div>
+        <div class="stat-card stat-warning">
+            <div class="stat-value">{{ stats.assigned or 0 }}</div>
+            <div class="stat-label">New Assignments</div>
+        </div>
+        <div class="stat-card stat-info">
+            <div class="stat-value">{{ stats.in_progress or 0 }}</div>
+            <div class="stat-label">In Progress</div>
+        </div>
+        <div class="stat-card stat-success">
+            <div class="stat-value">{{ stats.resolved or 0 }}</div>
+            <div class="stat-label">Resolved</div>
+        </div>
+    </div>
+
+    <!-- Assigned Tickets -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Assigned Support Tickets</h3>
+        </div>
+        <div class="card-body">
+            {% if tickets %}
+            <div class="tickets-list">
+                {% for ticket in tickets %}
+                <div class="ticket-item ticket-detail">
+                    <div class="ticket-header-row">
+                        <span class="ticket-number">{{ ticket.ticket_number }}</span>
+                        <span class="badge badge-{{ ticket.status|lower|replace(' ', '-') }}">
+                            {{ ticket.status }}
+                        </span>
+                    </div>
+                    
+                    <h4>{{ ticket.subject }}</h4>
+                    <p class="ticket-description">{{ ticket.description }}</p>
+                    
+                    <div class="ticket-meta">
+                        <span class="badge badge-category">{{ ticket.category }}</span>
+                        <span class="badge badge-priority-{{ ticket.priority|lower }}">{{ ticket.priority }}</span>
+                    </div>
+                    
+                    <div class="ticket-user-info">
+                        <strong>Reported by:</strong> {{ ticket.user_name }} ({{ ticket.department }})<br>
+                        <strong>Email:</strong> {{ ticket.user_email }}<br>
+                        <strong>Assigned:</strong> {{ ticket.assigned_at_formatted or ticket.assigned_at }}
+                    </div>
+                    
+                    <div class="ticket-actions">
+                        <select class="status-select" data-ticket-id="{{ ticket.id }}">
+                            <option value="Assigned" {% if ticket.status == 'Assigned' %}selected{% endif %}>Assigned</option>
+                            <option value="In Progress" {% if ticket.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                            <option value="Resolved" {% if ticket.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="updateStatus({{ ticket.id }})">
+                            Update Status
+                        </button>
+                    </div>
+                    
+                    <div class="ticket-notes">
+                        <textarea id="notes-{{ ticket.id }}" placeholder="Add resolution notes..." rows="2"></textarea>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="no-tickets">No tickets assigned to you at this time.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Socket.IO for Real-time Notifications -->
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+<script>
+// Initialize Socket.IO connection
+const socket = io();
+
+// Listen for new ticket assignments
+socket.on('new_ticket_assigned', function(data) {
+    // Only show notification if this technician is logged in and it's their ticket
+    {% if session.role == 'technician' and session.user_id %}
+    if (data.technician_id == {{ session.user_id }}) {
+        // Show browser notification
+        showNotification(data);
+        
+        // Play sound alert
+        playNotificationSound();
+        
+        // Reload page to show new ticket
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+    }
+    {% endif %}
+});
+
+function showNotification(data) {
+    // Create notification element
+    const notificationDiv = document.createElement('div');
+    notificationDiv.className = 'notification-popup';
+    notificationDiv.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-icon">🎫</div>
+            <div class="notification-text">
+                <strong>New Ticket Assigned!</strong><br>
+                <span>${data.ticket_number}</span><br>
+                <small>${data.subject}</small><br>
+                <span class="badge badge-priority-${data.priority.toLowerCase()}">${data.priority}</span>
+                <span class="badge badge-category">${data.category}</span>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(notificationDiv);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        notificationDiv.classList.add('fade-out');
+        setTimeout(() => notificationDiv.remove(), 500);
+    }, 5000);
+    
+    // Request browser notification permission
+    if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("New Ticket Assigned", {
+            body: `${data.ticket_number}: ${data.subject}`,
+            icon: '/static/icon.png'
+        });
+    } else if ("Notification" in window && Notification.permission !== "denied") {
+        Notification.requestPermission().then(function (permission) {
+            if (permission === "granted") {
+                new Notification("New Ticket Assigned", {
+                    body: `${data.ticket_number}: ${data.subject}`
+                });
+            }
+        });
+    }
+}
+
+function playNotificationSound() {
+    // Create audio element for notification sound
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHGy/8+OZRA==');
+    audio.play().catch(e => console.log('Audio play failed:', e));
+}
+
+// Update status function
+async function updateStatus(ticketId) {
+    const statusSelect = document.querySelector(`select[data-ticket-id="${ticketId}"]`);
+    const notesTextarea = document.getElementById(`notes-${ticketId}`);
+    
+    const newStatus = statusSelect.value;
+    const notes = notesTextarea.value;
+    
+    try {
+        const response = await fetch(`/api/tickets/${ticketId}/update-status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                status: newStatus,
+                notes: notes
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Status updated successfully!');
+            location.reload();
+        } else {
+            alert('Error updating status: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Network error. Please try again.');
+    }
+}
+</script>
+
+<style>
+.notification-popup {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: white;
+    border: 2px solid var(--primary-500);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    box-shadow: var(--shadow-xl);
+    z-index: 9999;
+    min-width: 350px;
+    animation: slideIn 0.3s ease-out;
+}
+
+.notification-content {
+    display: flex;
+    gap: var(--space-3);
+    align-items: start;
+}
+
+.notification-icon {
+    font-size: 2rem;
+}
+
+.notification-text strong {
+    color: var(--primary-700);
+    font-size: 1.125rem;
+}
+
+.notification-text span {
+    display: inline-block;
+    margin-top: var(--space-2);
+}
+
+.notification-text small {
+    color: var(--text-secondary);
+}
+
+.notification-popup.fade-out {
+    animation: fadeOut 0.5s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        transform: translateX(400px);
+    }
+}
+</style>
+{% endblock %}

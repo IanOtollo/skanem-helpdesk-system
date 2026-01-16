@@ -1,0 +1,102 @@
+subject,description,category
+Printer not working,Office printer not responding to print commands,Hardware
+Computer won't start,Desktop computer fails to boot showing black screen,Hardware
+Mouse not responding,Wireless mouse stopped working suddenly,Hardware
+Keyboard issues,Several keys on keyboard not functioning properly,Hardware
+Monitor display problem,Monitor showing distorted colors and lines,Hardware
+Scanner malfunction,Document scanner not detecting paper feed,Hardware
+Network cable damaged,Ethernet cable appears physically damaged near connector,Hardware
+Hard drive failure,Computer reporting hard drive errors and slow performance,Hardware
+RAM upgrade needed,System running slow need additional memory,Hardware
+Laptop overheating,Laptop getting extremely hot during operation,Hardware
+Email not working,Cannot send or receive emails from Outlook,Software
+Software installation error,Getting error when trying to install new software,Software
+Excel crash,Microsoft Excel crashes when opening large files,Software
+Database connection failed,Cannot connect to company database from application,Software
+Antivirus update failed,Antivirus software failed to update definitions,Software
+Login problems,Cannot login to company portal with correct credentials,Software
+Application freezing,CRM application freezes frequently during use,Software
+File permission denied,Getting access denied error when opening shared files,Software
+Password reset needed,Forgot password for company system need reset,Software
+Software license expired,Software showing license expiration message,Software
+Internet not working,No internet connection on workstation,Network
+WiFi connection dropping,Wireless connection keeps disconnecting frequently,Network
+VPN not connecting,Cannot establish VPN connection to company network,Network
+Slow network speed,Network extremely slow affecting productivity,Network
+Cannot access shared drive,Unable to access network shared folders,Network
+Email server down,Cannot connect to email server,Network
+Website not loading,Company intranet website not accessible,Network
+Network printer offline,Cannot print to network printer showing offline,Network
+Remote desktop failed,Remote desktop connection not working,Network
+IP conflict error,Computer showing IP address conflict message,Network
+Database slow query,Database queries taking too long to execute,Database
+Cannot create backup,Database backup process failing with errors,Database
+Table corruption,Database table appears to be corrupted,Database
+Connection pool exhausted,Too many database connections error message,Database
+SQL query error,Getting syntax error in SQL query execution,Database
+Data import failed,Cannot import CSV data into database,Database
+Replication stopped,Database replication between servers stopped,Database
+Index rebuild needed,Database performance degraded need index optimization,Database
+Transaction deadlock,Getting deadlock errors in database transactions,Database
+Database disk full,Database server running out of disk space,Database
+Printer paper jam,Printer has paper jam need assistance,Hardware
+Projector not displaying,Conference room projector not showing image,Hardware
+Headset microphone issue,Headset microphone not working in calls,Hardware
+External drive not detected,USB external hard drive not recognized,Hardware
+Battery draining fast,Laptop battery draining unusually fast,Hardware
+Cooling fan noisy,Computer cooling fan making loud noise,Hardware
+Touch screen not working,Touchscreen display not responding to touch,Hardware
+Webcam not functioning,Laptop webcam not working in video calls,Hardware
+Barcode scanner error,Barcode scanner not reading labels properly,Hardware
+UPS alarm beeping,Uninterruptible power supply showing error,Hardware
+Cannot open PDF files,PDF files not opening showing error message,Software
+Browser not working,Web browser crashing when visiting websites,Software
+Print preview blank,Print preview showing blank page,Software
+Copy paste not working,Cannot copy and paste text between applications,Software
+Spell check disabled,Spell checker not working in Word documents,Software
+Calendar sync issue,Calendar not syncing with mobile device,Software
+Zoom audio problem,No audio in Zoom meetings,Software
+Teams video frozen,Microsoft Teams video feed freezing,Software
+Adobe license error,Adobe Creative Suite showing license error,Software
+Backup software failed,Scheduled backup did not complete,Software
+Cannot map network drive,Network drive mapping failing with error,Network
+Firewall blocking access,Firewall blocking access to required website,Network
+DNS resolution failed,Cannot resolve domain names getting DNS errors,Network
+Bandwidth limit reached,Network bandwidth usage limit exceeded,Network
+Port forwarding issue,Need port forwarding configured for application,Network
+DHCP not assigning IP,Workstation not getting IP address automatically,Network
+Proxy server error,Proxy authentication failing,Network
+SSL certificate expired,Website SSL certificate has expired,Network
+Gateway unreachable,Default gateway not responding,Network
+Packet loss detected,High packet loss affecting network quality,Network
+Missing database records,Some records disappeared from database table,Database
+Foreign key constraint error,Cannot delete record due to foreign key constraint,Database
+Database login failed,Cannot authenticate to database server,Database
+Stored procedure error,Database stored procedure returning wrong results,Database
+View not updating,Database view not reflecting recent changes,Database
+Trigger not firing,Database trigger not executing as expected,Database
+Schema migration failed,Database schema update script failed,Database
+Log file growing large,Database transaction log consuming disk space,Database
+Cannot create user,Error creating new database user account,Database
+Collation conflict,Getting collation conflict error in query,Database
+System running slow,Computer performance very slow,Hardware
+No display on monitor,Monitor showing no signal message,Hardware
+Keyboard language wrong,Keyboard typing wrong characters,Software
+Audio not working,No sound from computer speakers,Hardware
+File download interrupted,Cannot download files from internet,Network
+Cannot save document,Getting error when saving Word document,Software
+Screen resolution issue,Monitor resolution settings incorrect,Software
+Bluetooth not connecting,Cannot pair Bluetooth devices,Hardware
+App not installing,Mobile app installation failing,Software
+Storage space low,Computer running out of disk space,Hardware
+Internet speed test slow,Internet connection slower than expected,Network
+Time zone incorrect,System clock showing wrong time,Software
+Notification not working,System notifications not appearing,Software
+Update stuck,Windows update stuck at certain percentage,Software
+Taskbar missing,Windows taskbar disappeared from screen,Software
+Icons not loading,Desktop icons not displaying properly,Software
+Sound crackling,Audio output has crackling noise,Hardware
+Fan not spinning,Computer fan not running,Hardware
+Port not working,USB port not recognizing devices,Hardware
+Camera blurry,Laptop camera producing blurry images,Hardware
+Microphone echo,Microphone producing echo sound,Hardware
