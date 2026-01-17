@@ -434,9 +434,10 @@ def submit_ticket():
     if session.get('role') != 'user':
         return jsonify({'error': 'Unauthorized'}), 403
     
-    subject = request.form.get('subject')
-    description = request.form.get('description')
-    priority = request.form.get('priority', 'Medium')
+    data = request.get_json()
+    subject = data.get('subject') if data else None
+    description = data.get('description') if data else None
+    priority = data.get('priority', 'Medium') if data else 'Medium'
     
     if not subject or not description:
         return jsonify({'error': 'Subject and description required'}), 400
