@@ -685,7 +685,6 @@ if __name__ == '__main__':
     print("  Password: admin123")
     print("\n" + "="*70 + "\n")
     
-    # CRITICAL: Read PORT from Railway environment
     port = int(os.environ.get('PORT', 5000))
     print(f"🚀 Starting server on 0.0.0.0:{port}\n")
     
