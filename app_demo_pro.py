@@ -1,6 +1,6 @@
 """
 SKANEM INTERLABELS AFRICA - HELPDESK SYSTEM
-Production Version with Full Security & Railway Deployment
+Production Version with ML Priority Prediction
 """
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
@@ -28,7 +28,8 @@ DB_PATH = 'helpdesk.db'
 
 # ML Model configuration
 MODEL_DIR = 'models/'
-MODEL_PATH = os.path.join(MODEL_DIR, 'ticket_classifier.pkl')
+CATEGORY_MODEL_PATH = os.path.join(MODEL_DIR, 'ticket_classifier.pkl')
+PRIORITY_MODEL_PATH = os.path.join(MODEL_DIR, 'priority_classifier.pkl')
 VECTORIZER_PATH = os.path.join(MODEL_DIR, 'tfidf_vectorizer.pkl')
 METADATA_PATH = os.path.join(MODEL_DIR, 'model_metadata.pkl')
 
@@ -37,13 +38,17 @@ CONFIDENCE_THRESHOLD = 0.60
 
 # Load ML models
 try:
-    ml_model = joblib.load(MODEL_PATH)
+    category_model = joblib.load(CATEGORY_MODEL_PATH)
+    priority_model = joblib.load(PRIORITY_MODEL_PATH)
     vectorizer = joblib.load(VECTORIZER_PATH)
     model_metadata = joblib.load(METADATA_PATH)
-    print(f"✓ ML Model loaded: {model_metadata.get('model_version', 'Unknown')}")
+    print(f"✓ ML Models loaded: {model_metadata.get('model_version', 'Unknown')}")
+    print(f"✓ Category Accuracy: {model_metadata.get('category_accuracy', 0)*100:.2f}%")
+    print(f"✓ Priority Accuracy: {model_metadata.get('priority_accuracy', 0)*100:.2f}%")
 except Exception as e:
-    print(f"⚠️  ML Model not found. Manual assignment will be used.")
-    ml_model = None
+    print(f"⚠️  ML Models not found. Run train_model_pro.py first.")
+    category_model = None
+    priority_model = None
     vectorizer = None
     model_metadata = {}
 
@@ -94,24 +99,44 @@ def create_notification(user_type, user_id, ticket_id, notification_type, title,
         conn.close()
 
 # =============================================================================
-# ML FUNCTIONS
+# ML FUNCTIONS - NOW PREDICTS CATEGORY + PRIORITY
 # =============================================================================
 
-def classify_ticket_with_confidence(subject, description):
-    if not ml_model or not vectorizer:
-        return None, 0.0, True
+def classify_ticket_with_ml(subject, description):
+    """
+    Uses ML to predict BOTH category and priority
+    Returns: (category, category_confidence, priority, priority_confidence, needs_manual_review)
+    """
+    if not category_model or not priority_model or not vectorizer:
+        return None, 0.0, 'Medium', 0.0, True
     
     try:
+        # Combine text
         text = f"{subject} {description}".lower().strip()
+        
+        # Vectorize
         text_vec = vectorizer.transform([text])
-        category = ml_model.predict(text_vec)[0]
-        probabilities = ml_model.predict_proba(text_vec)[0]
-        confidence = probabilities.max()
-        confidence_pct = round(confidence * 100, 2)
-        needs_manual_review = confidence < CONFIDENCE_THRESHOLD
-        return category, confidence_pct, needs_manual_review
-    except:
-        return None, 0.0, True
+        
+        # PREDICT CATEGORY
+        category = category_model.predict(text_vec)[0]
+        cat_probabilities = category_model.predict_proba(text_vec)[0]
+        cat_confidence = cat_probabilities.max()
+        cat_confidence_pct = round(cat_confidence * 100, 2)
+        
+        # PREDICT PRIORITY
+        priority = priority_model.predict(text_vec)[0]
+        pri_probabilities = priority_model.predict_proba(text_vec)[0]
+        pri_confidence = pri_probabilities.max()
+        pri_confidence_pct = round(pri_confidence * 100, 2)
+        
+        # Check if needs manual review (based on category confidence)
+        needs_manual_review = cat_confidence < CONFIDENCE_THRESHOLD
+        
+        return category, cat_confidence_pct, priority, pri_confidence_pct, needs_manual_review
+        
+    except Exception as e:
+        print(f"ML Classification error: {e}")
+        return None, 0.0, 'Medium', 0.0, True
 
 # =============================================================================
 # AUTHENTICATION
@@ -146,7 +171,7 @@ def assign_ticket_to_technician(ticket_id, category, is_manual=False):
     technician = cursor.fetchone()
     
     if technician:
-        assigned_by = 'Admin' if is_manual else 'System'
+        assigned_by = 'Admin' if is_manual else 'AI System'
         cursor.execute("""
             INSERT INTO assignments (ticket_id, technician_id, assigned_by) 
             VALUES (?, ?, ?)
@@ -425,7 +450,7 @@ def admin_dashboard():
                          confidence_threshold=CONFIDENCE_THRESHOLD * 100)
 
 # =============================================================================
-# API ROUTES
+# API ROUTES - ML NOW PREDICTS PRIORITY
 # =============================================================================
 
 @app.route('/api/tickets/submit', methods=['POST'])
@@ -437,12 +462,12 @@ def submit_ticket():
     data = request.get_json()
     subject = data.get('subject') if data else None
     description = data.get('description') if data else None
-    priority = data.get('priority', 'Medium') if data else 'Medium'
     
     if not subject or not description:
         return jsonify({'error': 'Subject and description required'}), 400
     
-    category, confidence_score, needs_manual_review = classify_ticket_with_confidence(subject, description)
+    # ML PREDICTS BOTH CATEGORY AND PRIORITY
+    category, cat_confidence, priority, pri_confidence, needs_manual_review = classify_ticket_with_ml(subject, description)
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -456,7 +481,7 @@ def submit_ticket():
                 user_id, confidence_score, flagged_for_manual_review, status
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (ticket_number, subject, description, category, priority,
-              session['user_id'], confidence_score, needs_manual_review, 'Classified'))
+              session['user_id'], cat_confidence, needs_manual_review, 'Classified'))
         
         ticket_id = cursor.lastrowid
         
@@ -473,7 +498,9 @@ def submit_ticket():
             'success': True,
             'ticket_number': ticket_number,
             'category': category,
-            'confidence_score': confidence_score,
+            'category_confidence': cat_confidence,
+            'priority': priority,
+            'priority_confidence': pri_confidence,
             'needs_manual_review': needs_manual_review
         }
         
@@ -619,6 +646,7 @@ if __name__ == '__main__':
     print("="*70)
     print("\n✓ Security: Bcrypt password hashing ENABLED")
     print(f"✓ ML Confidence threshold: {CONFIDENCE_THRESHOLD*100}%")
+    print("✓ ML predicts: CATEGORY + PRIORITY")
     print("✓ Manual review: Automatic flagging")
     print("✓ Real-time notifications: Socket.IO ENABLED")
     print("✓ Complete lifecycle: 6 stages (including Closed)")
