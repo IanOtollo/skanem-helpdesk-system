@@ -6,14 +6,14 @@
 <div class="container">
     <div class="dashboard-header">
         <h2>Submit & Track Support Tickets</h2>
-        <p>Create new IT support requests and monitor their resolution status</p>
+        <p>AI-powered ticket classification and intelligent routing</p>
     </div>
 
     <div class="dashboard-grid">
         <!-- Submit Ticket Form -->
         <div class="card">
             <div class="card-header">
-                <h3>Create New Ticket</h3>
+                <h3>🤖 Create New Ticket</h3>
             </div>
             <div class="card-body">
                 <form id="ticketForm">
@@ -29,18 +29,41 @@
                                   placeholder="Provide comprehensive information about the issue, including any error messages or steps to reproduce..."></textarea>
                     </div>
 
-                    <div class="form-group">
-                        <label for="priority">Priority Level</label>
-                        <select id="priority" name="priority">
-                            <option value="Low">Low</option>
-                            <option value="Medium" selected>Medium</option>
-                            <option value="High">High</option>
-                            <option value="Critical">Critical</option>
-                        </select>
-                    </div>
-
                     <button type="submit" class="btn btn-primary btn-block">Submit Ticket</button>
                 </form>
+
+                <!-- AI Analysis Loading -->
+                <div id="aiAnalyzing" class="ai-analyzing" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>🤖 AI analyzing your ticket...</p>
+                </div>
+
+                <!-- ML Results Display -->
+                <div id="mlResults" class="ml-results" style="display: none;">
+                    <div class="ml-results-header">
+                        <h4>✓ AI Analysis Complete</h4>
+                    </div>
+                    <div class="ml-results-body">
+                        <div class="ml-result-item">
+                            <span class="ml-label">Category:</span>
+                            <span id="mlCategory" class="ml-value"></span>
+                            <span id="mlCategoryConf" class="ml-confidence"></span>
+                        </div>
+                        <div class="ml-result-item">
+                            <span class="ml-label">Priority:</span>
+                            <span id="mlPriority" class="ml-value"></span>
+                            <span id="mlPriorityConf" class="ml-confidence"></span>
+                        </div>
+                        <div class="ml-result-item">
+                            <span class="ml-label">Ticket Number:</span>
+                            <span id="mlTicketNum" class="ml-value"></span>
+                        </div>
+                        <div class="ml-result-item">
+                            <span class="ml-label">Status:</span>
+                            <span id="mlStatus" class="ml-value"></span>
+                        </div>
+                    </div>
+                </div>
 
                 <div id="submitMessage" class="alert" style="display: none; margin-top: 20px;"></div>
             </div>
@@ -72,7 +95,7 @@
                             {% endif %}
                         </div>
                         <div class="ticket-footer">
-                            <small>Created: {{ ticket.created_at_formatted or ticket.created_at }}</small>
+                            <small>Created: {{ ticket.submitted_at_formatted or ticket.submitted_at }}</small>
                         </div>
                     </div>
                     {% endfor %}
@@ -84,6 +107,107 @@
         </div>
     </div>
 </div>
+
+<style>
+.ai-analyzing {
+    text-align: center;
+    padding: 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    margin-top: 20px;
+    color: white;
+}
+
+.spinner {
+    border: 4px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top: 4px solid white;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.ml-results {
+    margin-top: 20px;
+    border: 2px solid #4CAF50;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ml-results-header {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+    padding: 15px;
+    text-align: center;
+}
+
+.ml-results-header h4 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.ml-results-body {
+    padding: 20px;
+    background: #f8f9fa;
+}
+
+.ml-result-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: white;
+    border-radius: 6px;
+    border-left: 4px solid #4CAF50;
+}
+
+.ml-label {
+    font-weight: 600;
+    color: #555;
+    min-width: 120px;
+}
+
+.ml-value {
+    font-weight: 500;
+    color: #333;
+    flex: 1;
+}
+
+.ml-confidence {
+    font-size: 12px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.badge-priority-critical {
+    background: #d32f2f;
+    color: white;
+}
+
+.badge-priority-high {
+    background: #ff9800;
+    color: white;
+}
+
+.badge-priority-medium {
+    background: #2196F3;
+    color: white;
+}
+
+.badge-priority-low {
+    background: #4CAF50;
+    color: white;
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
@@ -93,14 +217,21 @@ document.getElementById('ticketForm').addEventListener('submit', async function(
     
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const messageDiv = document.getElementById('submitMessage');
+    const aiAnalyzing = document.getElementById('aiAnalyzing');
+    const mlResults = document.getElementById('mlResults');
     
+    // Hide previous results
+    messageDiv.style.display = 'none';
+    mlResults.style.display = 'none';
+    
+    // Show AI analyzing animation
+    aiAnalyzing.style.display = 'block';
     submitBtn.disabled = true;
     submitBtn.textContent = 'Processing...';
     
     const formData = {
         subject: document.getElementById('subject').value,
-        description: document.getElementById('description').value,
-        priority: document.getElementById('priority').value
+        description: document.getElementById('description').value
     };
     
     try {
@@ -114,27 +245,36 @@ document.getElementById('ticketForm').addEventListener('submit', async function(
         
         const data = await response.json();
         
+        // Hide AI analyzing
+        aiAnalyzing.style.display = 'none';
+        
         if (response.ok) {
-            messageDiv.className = 'alert alert-success';
-            messageDiv.innerHTML = `
-                <strong>Success!</strong><br>
-                Ticket ${data.ticket_number} created successfully<br>
-                <strong>Category:</strong> ${data.category} (${data.confidence} confidence)<br>
-                <strong>Assigned to:</strong> ${data.assigned_to}
-            `;
-            messageDiv.style.display = 'block';
+            // Show ML results
+            mlResults.style.display = 'block';
             
+            document.getElementById('mlCategory').textContent = data.category || 'Unknown';
+            document.getElementById('mlCategoryConf').textContent = `${data.category_confidence}% confidence`;
+            
+            document.getElementById('mlPriority').textContent = data.priority || 'Medium';
+            document.getElementById('mlPriorityConf').textContent = `${data.priority_confidence}% confidence`;
+            
+            document.getElementById('mlTicketNum').textContent = data.ticket_number;
+            document.getElementById('mlStatus').textContent = data.status;
+            
+            // Reset form
             e.target.reset();
             
+            // Reload after 3 seconds
             setTimeout(() => {
                 location.reload();
-            }, 2000);
+            }, 3000);
         } else {
             messageDiv.className = 'alert alert-error';
             messageDiv.textContent = data.error || 'Error creating ticket';
             messageDiv.style.display = 'block';
         }
     } catch (error) {
+        aiAnalyzing.style.display = 'none';
         messageDiv.className = 'alert alert-error';
         messageDiv.textContent = 'Network error. Please try again.';
         messageDiv.style.display = 'block';
