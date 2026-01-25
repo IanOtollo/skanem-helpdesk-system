@@ -13,7 +13,7 @@
         <!-- Submit Ticket Form -->
         <div class="card">
             <div class="card-header">
-                <h3>🤖 Create New Ticket</h3>
+                <h3>Create New Ticket</h3>
             </div>
             <div class="card-body">
                 <form id="ticketForm">
@@ -35,13 +35,13 @@
                 <!-- AI Analysis Loading -->
                 <div id="aiAnalyzing" class="ai-analyzing" style="display: none;">
                     <div class="spinner"></div>
-                    <p>🤖 AI analyzing your ticket...</p>
+                    <p>AI analyzing ticket...</p>
                 </div>
 
                 <!-- ML Results Display -->
                 <div id="mlResults" class="ml-results" style="display: none;">
                     <div class="ml-results-header">
-                        <h4>✓ AI Analysis Complete</h4>
+                        <h4>AI Analysis Complete</h4>
                     </div>
                     <div class="ml-results-body">
                         <div class="ml-result-item">
@@ -88,7 +88,11 @@
                         <h4>{{ ticket.subject }}</h4>
                         <p class="ticket-description">{{ ticket.description[:150] }}{% if ticket.description|length > 150 %}...{% endif %}</p>
                         <div class="ticket-meta">
+                            {% if ticket.category %}
                             <span class="badge badge-category">{{ ticket.category }}</span>
+                            {% else %}
+                            <span class="badge badge-category">NONE</span>
+                            {% endif %}
                             <span class="badge badge-priority-{{ ticket.priority|lower }}">{{ ticket.priority }}</span>
                             {% if ticket.technician_name %}
                             <span class="badge">Assigned: {{ ticket.technician_name }}</span>
@@ -112,20 +116,28 @@
 .ai-analyzing {
     text-align: center;
     padding: 30px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 8px;
+    background: #1e3a8a;
+    border-radius: 4px;
     margin-top: 20px;
     color: white;
+    border-left: 4px solid #3b82f6;
+}
+
+.ai-analyzing p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
 }
 
 .spinner {
-    border: 4px solid rgba(255,255,255,0.3);
+    border: 3px solid rgba(255,255,255,0.3);
     border-radius: 50%;
-    border-top: 4px solid white;
-    width: 40px;
-    height: 40px;
+    border-top: 3px solid white;
+    width: 30px;
+    height: 30px;
     animation: spin 1s linear infinite;
-    margin: 0 auto 15px;
+    margin: 0 auto 12px;
 }
 
 @keyframes spin {
@@ -135,76 +147,95 @@
 
 .ml-results {
     margin-top: 20px;
-    border: 2px solid #4CAF50;
-    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
     overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .ml-results-header {
-    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-    color: white;
-    padding: 15px;
-    text-align: center;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 12px 20px;
 }
 
 .ml-results-header h4 {
     margin: 0;
-    font-size: 18px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .ml-results-body {
     padding: 20px;
-    background: #f8f9fa;
+    background: white;
 }
 
 .ml-result-item {
     display: flex;
     align-items: center;
-    padding: 12px;
-    margin-bottom: 10px;
-    background: white;
-    border-radius: 6px;
-    border-left: 4px solid #4CAF50;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    background: #f9fafb;
+    border-radius: 4px;
+    border-left: 3px solid #3b82f6;
+}
+
+.ml-result-item:last-child {
+    margin-bottom: 0;
 }
 
 .ml-label {
     font-weight: 600;
-    color: #555;
+    color: #6b7280;
     min-width: 120px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .ml-value {
     font-weight: 500;
-    color: #333;
+    color: #111827;
     flex: 1;
+    font-size: 14px;
 }
 
 .ml-confidence {
-    font-size: 12px;
-    background: #e8f5e9;
-    color: #2e7d32;
-    padding: 4px 12px;
-    border-radius: 12px;
+    font-size: 11px;
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 4px 10px;
+    border-radius: 3px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .badge-priority-critical {
-    background: #d32f2f;
+    background: #dc2626;
     color: white;
 }
 
 .badge-priority-high {
-    background: #ff9800;
+    background: #ea580c;
     color: white;
 }
 
 .badge-priority-medium {
-    background: #2196F3;
+    background: #3b82f6;
     color: white;
 }
 
 .badge-priority-low {
-    background: #4CAF50;
+    background: #059669;
+    color: white;
+}
+
+.badge-category {
+    background: #6b7280;
     color: white;
 }
 </style>
@@ -264,10 +295,10 @@ document.getElementById('ticketForm').addEventListener('submit', async function(
             // Reset form
             e.target.reset();
             
-            // Reload after 3 seconds
+            // Reload after 9 seconds (8-10 range)
             setTimeout(() => {
                 location.reload();
-            }, 3000);
+            }, 9000);
         } else {
             messageDiv.className = 'alert alert-error';
             messageDiv.textContent = data.error || 'Error creating ticket';
